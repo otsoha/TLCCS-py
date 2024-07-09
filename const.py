@@ -49,3 +49,7 @@ CCS_SERIES_NUM_VERSION_BYTES = 3
 
 # Specifics
 CCS_SERIES_NUM_RAW_PIXELS = 3694
+
+# LLIO constants
+LL_DEFAULT_BULK_PIPE = 0x86    # This works and finds scan data
+LL_DEFAULT_TIMEOUT = 2000      # This same timeout is used by the orinal drivers
