@@ -1,10 +1,8 @@
 from lowLevel import LLIO
 from array import array
 import const
-import math
 import usb
 import numpy as np
-import time
 import struct
 import matplotlib.pyplot as plt
 
@@ -14,23 +12,36 @@ class CCSDRV:
         self.io = None
         self.dev = None
 
+
     def open(self, vid=0x1313, pid=0x8087):
+        """Opens a connection through LLIO.
+
+        Args:
+            vid (hexadecimal, optional): vendor ID. Defaults to 0x1313.
+            pid (hexadecimal, optional): product ID. Defaults to 0x8087.
+        """
+        # Set class vars
         self.io = LLIO(vid, pid)
         self.dev = self.io.dev
+
         # Set default integration time
         assert self.set_integration_time(const.CCS_SERIES_DEF_INT_TIME)
 
+
     def get_integration_time(self):
-        # Create a buffer of the required size
+        """Returns current integration time in seconds
+
+        Returns:
+            _type_: integration time in seconds
+        """
+        # Create a buffer of the required size and read
         readTo = usb.util.create_buffer(const.CCS_SERIES_NUM_INTEG_CTRL_BYTES)
-        
-        # Read the data
         self.io.control_in(const.CCS_SERIES_RCMD_INTEGRATION_TIME, readTo)
         
         # Unpack the response using struct
         raw_presc, raw_fill, raw_integ = struct.unpack('>HHH', readTo)
 
-        # Extract the 12-bit values by masking the lower 12 bits
+        # Extract 12-bit values
         presc = raw_presc & 0x0FFF
         fill = raw_fill & 0x0FFF
         integ = raw_integ & 0x0FFF
@@ -43,14 +54,27 @@ class CCSDRV:
 
         return integration_time_seconds
 
+
+    """
+    Checked with the original code, and intg_time of 1 s should result in:
+    00 08 10 00 2F 3A
+    Checked against this, it seems to work. for some reason the default does not seem to be the actual default.
+    """
     # FIXME: Add better error checking.
     def set_integration_time(self, intg_time: np.float64)-> bool:
+        """Sets the integration time. 
+
+        Args:
+            intg_time (np.float64): integration time in seconds. Should be between CCS_SERIES_MIN_INT_TIME and
+            CCS_SERIES_MAX_INT_TIME
+
+        Raises:
+            ValueError: desired intg_time out of range
+
+        Returns:
+            bool: pass or fail for setting the value.
         """
-        Checked with the original code, and intg_time of 1 s should result in:
-        00 08 10 00 2F 3A
-        Checked against this, it seems to work. for some reason the default does not seem to be the actual default.
-        """
-    # Check for valid integration time range
+        # Check for valid integration time range
         if intg_time < const.CCS_SERIES_MIN_INT_TIME or intg_time > const.CCS_SERIES_MAX_INT_TIME:
             raise ValueError("Integration time out of valid range")
         
@@ -91,8 +115,13 @@ class CCSDRV:
 
 
     def get_device_status(self):
-        readTo = array('h', [0])    # signed short of 16 bits.
-        self.io.control_in(const.CCS_SERIES_RCMD_GET_STATUS, readTo)    #Ahh yes my favourite, a magic constant.
+        """Gets device status and parses the status bytes
+
+        Returns:
+            array: A list of set status bits in a readable form.
+        """
+        readTo = array('h', [0])    # signed short of 16 bits to get status.
+        self.io.control_in(const.CCS_SERIES_RCMD_GET_STATUS, readTo)
         readTo = readTo[0]
         statuses = []
 
@@ -107,13 +136,13 @@ class CCSDRV:
         if readTo & const.CCS_SERIES_STATUS_SCAN_START_TRANS:
             statuses.append("SCAN_START_TRANS")
         
-        if not statuses:
-            statuses.append("Unknown or no specific status bits are set")
-        
         return statuses
 
     def start_scan(self):
+        """Starts a single scan
+        """
         self.io.control_out(const.CCS_SERIES_WCMD_MODUS, None, wValue=const.MODUS_INTERN_SINGLE_SHOT)
+
 
     #FIXME: does not get properly parsed at the moment.
     def get_error(self):
@@ -121,7 +150,13 @@ class CCSDRV:
         self.io.control_in(const.CCS_SERIES_RCMD_GET_ERROR,buffer)
         return buffer
 
+
     def get_raw_scan_data(self):
+        """Get raw scan data for a single scan from the device buffer
+
+        Returns:
+            np.array(np.uint16): raw scan data
+        """
         # Calculate size of read and create a buffer to read into
         buffer_size = const.CCS_SERIES_NUM_RAW_PIXELS * 2  # since uint16 is 2 bytes
         buffer = usb.util.create_buffer(buffer_size)
@@ -133,43 +168,10 @@ class CCSDRV:
         return readTo
 
 
-def plot(data):
-    # Ensure the number of points matches your data length
-    num_points = const.CCS_SERIES_NUM_RAW_PIXELS
-    if len(data) != num_points:
-        raise ValueError("Data length does not match the number of raw pixels")
-
-    # Generate wavelengths from 500nm to 1000nm
-    wavelengths = np.linspace(500, 1000, num_points)
-    intensities = data
-
-    # Plot the spectrometer data
-    plt.figure(figsize=(10, 6))
-    plt.plot(wavelengths, intensities, label='Spectrometer Data', color='blue')
-    plt.xlabel('Wavelength (nm)')
-    plt.ylabel('Intensity')
-    plt.title('Spectrometer Results')
-    plt.legend()
-    plt.grid(True)
-
-    # Save the plot as a PNG file
-    plt.savefig('spectrometer_results.png')
-    print("Plot saved as 'spectrometer_results.png'")
-
-def head(data):
-    print("First 10 bytes of raw scan data:")
-    for i in range(min(10, len(data))):
-        print(f"Byte {i}: {data[i]:02X}")
 
 
-device = CCSDRV()
-device.open()
-print(device.get_integration_time())
-print(device.get_device_status())
-device.start_scan()
-print(device.get_device_status())
-device.get_raw_scan_data()
-print(device.get_device_status())
+
+
 
 
 
