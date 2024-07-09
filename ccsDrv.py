@@ -4,7 +4,6 @@ import const
 import usb
 import numpy as np
 import struct
-import matplotlib.pyplot as plt
 
 class CCSDRV:
 
