@@ -24,6 +24,7 @@ class CCSDRV:
 
         # Set default integration time
         assert self.set_integration_time(const.CCS_SERIES_DEF_INT_TIME)
+        self.get_integration_time()
 
 
 
@@ -143,12 +144,6 @@ class CCSDRV:
         self.io.control_out(const.CCS_SERIES_WCMD_MODUS, None, wValue=const.MODUS_INTERN_SINGLE_SHOT)
 
 
-    #FIXME: does not get properly parsed at the moment.
-    def get_error(self):
-        buffer = usb.util.create_buffer(1)
-        self.io.control_in(const.CCS_SERIES_RCMD_GET_ERROR,buffer)
-        return buffer
-
 
     def get_raw_scan_data(self):
         """Get raw scan data for a single scan from the device buffer
@@ -167,7 +162,7 @@ class CCSDRV:
 
         return readTo
 
-    # FIXME: remove self and create an abstraction layer to get scan data.
+    # FIXME: remove self and create an abstraction layer to get scan data?
     def acquire_raw_scan_data(self, raw):
         # Initialize array for modified data
         data = np.zeros(const.CCS_SERIES_NUM_PIXELS, dtype=np.float64)    
@@ -213,3 +208,13 @@ class CCSDRV:
 
         return data
 
+
+    def get_firmware_revision(self): 
+        buffer = usb.util.create_buffer(const.CCS_SERIES_NUM_VERSION_BYTES)
+        self.io.control_in(const.CCS_SERIES_RCMD_PRODUCT_INFO, buffer, wValue=const.CCS_SERIES_FIRMWARE_VERSION)
+        return (buffer[0], buffer[1], buffer[2])
+    
+    def get_hardware_revision(self):
+        buffer = usb.util.create_buffer(const.CCS_SERIES_NUM_VERSION_BYTES)
+        self.io.control_in(const.CCS_SERIES_RCMD_PRODUCT_INFO, buffer, wValue=const.CCS_SERIES_HARDWARE_VERSION)
+        return (buffer[0], buffer[1], buffer[2])

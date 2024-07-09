@@ -59,3 +59,7 @@ MAX_ADC_VALUE = 0xFFFF
 # LLIO constants
 LL_DEFAULT_BULK_PIPE = 0x86    # This works and finds scan data
 LL_DEFAULT_TIMEOUT = 2000      # This same timeout is used by the orinal drivers
+
+# versions
+CCS_SERIES_FIRMWARE_VERSION = 0
+CCS_SERIES_HARDWARE_VERSION = 1

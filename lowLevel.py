@@ -14,7 +14,8 @@ class LLIO:
                 raise ValueError('Device not found')
             self.dev.set_configuration()
             self.bulk_in_pipe = const.LL_DEFAULT_BULK_PIPE    
-            self.timeout = const.LL_DEFAULT_TIMEOUT         
+            self.timeout = const.LL_DEFAULT_TIMEOUT
+            self.flush()         
 
         # Didn't connect, lose all hope
         except usb.core.USBError as e:
@@ -31,11 +32,15 @@ class LLIO:
 
     # FIXME: does not work yet
     def flush(self):
-        """Does not work right now, but should just read the messy buffers in case of an error.
+        """Absolute botch of an implementation
         FIXME
         """
-        full_flush_size = 3694 * 2
-        self.dev.read(self.bulk_in_pipe, full_flush_size, timeout = self.timeout) 
+        try:
+            full_flush_size = const.CCS_SERIES_NUM_RAW_PIXELS * 2
+            self.dev.read(self.bulk_in_pipe, full_flush_size, timeout = self.timeout) 
+            return True
+        except:
+            return True
 
 
     def read_raw(self, readTo: array):
