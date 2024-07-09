@@ -1,123 +1,86 @@
 import usb
-import numpy as np
+import const
 from array import array
 
-
-
-# Function to print details of the device. Thanks chatGPT.
-def print_device_details(device):
-    # Print device info
-    print("Device:")
-    print(f"  idVendor: {hex(device.idVendor)}")
-    print(f"  idProduct: {hex(device.idProduct)}")
-    print(f"  Manufacturer: {usb.util.get_string(device, device.iManufacturer)}")
-    print(f"  Product: {usb.util.get_string(device, device.iProduct)}")
-    print(f"  Serial Number: {usb.util.get_string(device, device.iSerialNumber)}")
-    print(f"  Device Class: {device.bDeviceClass}")
-    print(f"  Device Subclass: {device.bDeviceSubClass}")
-    print(f"  Device Protocol: {device.bDeviceProtocol}")
-    print(f"  Max Packet Size: {device.bMaxPacketSize0}")
-    print(f"  Number of Configurations: {device.bNumConfigurations}")
-
-    # Print configuration info
-    for config in device:
-        print(f"\nConfiguration {config.bConfigurationValue}:")
-        print(f"  Total Length: {config.wTotalLength}")
-        print(f"  Number of Interfaces: {config.bNumInterfaces}")
-        print(f"  Configuration Value: {config.bConfigurationValue}")
-        print(f"  Configuration: {usb.util.get_string(device, config.iConfiguration)}")
-        print(f"  Attributes: {config.bmAttributes}")
-        print(f"  Max Power: {config.bMaxPower}mA")
-
-        # Print interface info
-        for interface in config:
-            print(f"\n  Interface {interface.bInterfaceNumber}:")
-            print(f"    Number of Endpoints: {interface.bNumEndpoints}")
-            print(f"    Interface Class: {interface.bInterfaceClass}")
-            print(f"    Interface Subclass: {interface.bInterfaceSubClass}")
-            print(f"    Interface Protocol: {interface.bInterfaceProtocol}")
-            print(f"    Interface: {usb.util.get_string(device, interface.iInterface)}")
-
-            # Print endpoint info
-            for endpoint in interface:
-                print(f"\n    Endpoint {endpoint.bEndpointAddress}:")
-                print(f"      Attributes: {endpoint.bmAttributes}")
-                print(f"      Endpoint Address: {endpoint.bEndpointAddress}")
-                print(f"      Max Packet Size: {endpoint.wMaxPacketSize}")
-                print(f"      Interval: {endpoint.bInterval}")
-
-
-# Constants
-LL_SUCCESS = 0
-LL_ERROR = -1
-
-#FIXME: Create better error detection and reporting.
 class LLIO: 
-    """Umm so this is just a wrapper for like 4 lines of code. I like overhead.
+    """This class handles low level usb communication with a Thorlabs ccs-device.
+    Communication is done with pyusb. Includes control IN/OUT transfers and raw (bulk) read.
     """
     def __init__(self, vid=0x1313, pid=0x8087):
+        # Try to connect and set default values for vars.
         try:
             self.dev = usb.core.find(idVendor=vid, idProduct=pid)
             if self.dev is None:
                 raise ValueError('Device not found')
-            # Might not be necessary but doesn't hurt.
             self.dev.set_configuration()
-            self.bulk_in_pipe = 0x86    #FIXME: remove magic number 
-            self.timeout = 2000         #FIXME: remove magic number
-            print("Device connected")
+            self.bulk_in_pipe = const.LL_DEFAULT_BULK_PIPE    
+            self.timeout = const.LL_DEFAULT_TIMEOUT         
+
+        # Didn't connect, lose all hope
         except usb.core.USBError as e:
-            print(f"Error in initialization: {e}")
             self.dev = None
-        
+            self.bulk_in_pipe = 0x00
+            self.timeout = 0
+            raise usb.core.USBError(e)
+
+
     def __del__(self):
-        # Prolly wont be necessary to free manually, but it doesn't hurt.
         if self.dev != None:
             usb.util.dispose_resources(self.dev)
-        print("Device disconnected.")
+            print("Device disconnected.")   # FIXME: LLIO shouldn't print.
 
+    # FIXME: does not work yet
     def flush(self):
+        """Does not work right now, but should just read the messy buffers in case of an error.
+        FIXME
+        """
         full_flush_size = 3694 * 2
         self.dev.read(self.bulk_in_pipe, full_flush_size, timeout = self.timeout) 
 
+
     def read_raw(self, readTo: array):
+        """Bulk read from default bulk_in_pipe. Note: Reading is done in bytes. Catches errors with try-except
+
+        Args:
+            readTo (array): data is read into this. The size of the array specifies the size of the read.
+        """
         try:
             self.dev.read(self.bulk_in_pipe, readTo, timeout=self.timeout)
         except usb.core.USBError as e:
-            print(f"USB Error: {e}")
-            raise
+            raise usb.core.USBError(e)
         
 
     def control_out(self, bRequest, payload, bmRequestType = 0x40, wValue = 0, wIndex= 0):
-        """Sends a command to CCS with an attached payload. For example for setting data
+        """Sends a control OUT transfer to the device. (usually) For setting data.
 
         Args:
-            bRequest (hexadecimal): _description_
-            payload (_type_): _description_
-            bmRequestType (hexadecimal, optional): _description_. Defaults to 0x40.
-            wValue (int, optional): _description_. Defaults to 0.
-            wIndex (int, optional): _description_. Defaults to 0.
-        """  
+            bRequest (hexadecimal): type of request, provided in const.py
+            payload (array): data payload to be transfered with the command, if needed.
+            bmRequestType (hexadecimal, optional): specifies type of transfer. Defaults to 0x40.
+            wValue (int, optional): Defaults to 0.
+            wIndex (int, optional): Defaults to 0.
+        """
         try:
             self.dev.ctrl_transfer(bmRequestType, bRequest, wValue, wIndex, payload, timeout=self.timeout)
         except usb.core.USBError as e:
-            print(f"USB Error: {e}")
-            raise
+            raise usb.core.USBError(e)
+
         
     def control_in(self, bRequest, readTo: array, bmRequestType = 0xC0, wValue = 0, wIndex= 0):
-        """Sends a command to the CCS and watches for returned data. For example for reading data.
+        """Sends a control IN transfer and reads data. (usually) For reading data. 
 
         Args:
-            bRequest (_type_): _description_
-            readTo (array): the array in which the output is read
-            bmRequestType (_type_, optional): _description_. Defaults to 0xC0.
-            wValue (int, optional): _description_. Defaults to 0.
-            wIndex (int, optional): _description_. Defaults to 0.
+            bRequest (hexadecimal): type of request, provided in const.py
+            readTo (array): data is read into this. The size of the array specifies the size of the read.
+            bmRequestType (hexadecimal, optional): specifies type of transfer.. Defaults to 0xC0.
+            wValue (int, optional): Defaults to 0.
+            wIndex (int, optional): Defaults to 0.
 
         """
         try:
             self.dev.ctrl_transfer(bmRequestType, bRequest, wValue, wIndex, readTo, timeout=self.timeout)
         except usb.core.USBError as e:
-            print(f"USB Error: {e}")
-            raise
+            raise usb.core.USBError(e)
+
     
 
