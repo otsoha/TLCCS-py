@@ -47,7 +47,7 @@ class LLIO:
         try:
             self.dev.read(self.bulk_in_pipe, readTo, timeout=self.timeout)
         except usb.core.USBError as e:
-            raise usb.core.USBError(e)
+            print(f"USB error in read_raw: {e}")
         
 
     def control_out(self, bRequest, payload, bmRequestType = 0x40, wValue = 0, wIndex= 0):
@@ -63,7 +63,7 @@ class LLIO:
         try:
             self.dev.ctrl_transfer(bmRequestType, bRequest, wValue, wIndex, payload, timeout=self.timeout)
         except usb.core.USBError as e:
-            raise usb.core.USBError(e)
+            print(f"USB error in control_out: {e}")
 
         
     def control_in(self, bRequest, readTo: array, bmRequestType = 0xC0, wValue = 0, wIndex= 0):
@@ -80,7 +80,7 @@ class LLIO:
         try:
             self.dev.ctrl_transfer(bmRequestType, bRequest, wValue, wIndex, readTo, timeout=self.timeout)
         except usb.core.USBError as e:
-            raise usb.core.USBError(e)
+            print(f"USB error in control_in: {e}")
 
     
 

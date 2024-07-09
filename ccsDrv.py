@@ -11,7 +11,6 @@ class CCSDRV:
         self.io = None
         self.dev = None
 
-
     def open(self, vid=0x1313, pid=0x8087):
         """Opens a connection through LLIO.
 
@@ -25,6 +24,7 @@ class CCSDRV:
 
         # Set default integration time
         assert self.set_integration_time(const.CCS_SERIES_DEF_INT_TIME)
+
 
 
     def get_integration_time(self):
@@ -152,6 +152,7 @@ class CCSDRV:
 
     def get_raw_scan_data(self):
         """Get raw scan data for a single scan from the device buffer
+        The scan is sent from the device in uint16 with size CCS_SERIES_NUM_RAW_PIXELS
 
         Returns:
             np.array(np.uint16): raw scan data
@@ -166,13 +167,49 @@ class CCSDRV:
 
         return readTo
 
+    # FIXME: remove self and create an abstraction layer to get scan data.
+    def acquire_raw_scan_data(self, raw):
+        # Initialize array for modified data
+        data = np.zeros(const.CCS_SERIES_NUM_PIXELS, dtype=np.float64)    
+
+        # Sum the dark pixels
+        dark_com = np.sum(raw[const.DARK_PIXELS_OFFSET:const.DARK_PIXELS_OFFSET + const.NO_DARK_PIXELS])
+
+        # Calculate dark current average
+        dark_com /= const.NO_DARK_PIXELS
+
+        # Calculate normalizing factor
+        norm_com = 1.0 / (const.MAX_ADC_VALUE - dark_com)
+
+        # Process raw data
+        for i in range(const.CCS_SERIES_NUM_PIXELS):
+            data[i] = (raw[const.SCAN_PIXELS_OFFSET + i] - dark_com) * norm_com
+
+        return data
 
 
+    def read_eeprom(self, addr, idx, length):
 
+        # Buffers
+        data = bytearray()
+        remaining = length
+        address = addr
 
+        while remaining > 0:
+            # Determine how many bytes to transfer
+            transfer_length = min(remaining, const.ENDPOINT_0_TRANSFERSIZE)
+            buffer = usb.util.create_buffer(transfer_length)
+            
+            # Read from EEPROM
+            self.io.control_in(const.CCS_SERIES_RCMD_READ_EEPROM, readTo=buffer, wValue=address, wIndex=idx)
+   
 
+            # Append read data to buffer
+            data.extend(buffer)
+            
+            # Update counters
+            address += transfer_length
+            remaining -= transfer_length
 
-
-
-
+        return data
 
