@@ -4,6 +4,7 @@ import const
 import usb
 import numpy as np
 import struct
+import time
 
 class CCSDRV:
 
@@ -15,19 +16,30 @@ class CCSDRV:
         """Opens a connection through LLIO.
 
         Args:
-            vid (hexadecimal, optional): vendor ID. Defaults to 0x1313.
-            pid (hexadecimal, optional): product ID. Defaults to 0x8087.
+            vid (hexadecimal, optional): vendor ID. Defaults to 0x1313 (ThorLabs).
+            pid (hexadecimal, optional): product ID. Defaults to 0x8087 (CCS175).
         """
         # Set class vars
         self.io = LLIO(vid, pid)
         self.dev = self.io.dev
+        self.io.open()
 
         # Set default integration time
         assert self.set_integration_time(const.CCS_SERIES_DEF_INT_TIME)
-        self.get_integration_time()
+        state = self.get_device_status()
+        if "SCAN_IDLE" not in state:
+            # FIXME: This is a workaround for the device not being in idle state 
+            # after opening connection for first time. Look into reset.
+            print("Device not in idle state after opening connection. Running a scan and flushing to reset")
+            time.sleep(3) 
+            self.start_scan()
+            self.get_scan_data()   
 
-
-
+    def close(self):
+        """Closes the connection through LLIO.
+        """
+        self.io.close()
+    
     def get_integration_time(self):
         """Returns current integration time in seconds
 
@@ -54,7 +66,8 @@ class CCSDRV:
 
         return integration_time_seconds
 
-
+    def pipe_status(self):
+        return self.io.get_bulk_in_status()
     """
     Checked with the original code, and intg_time of 1 s should result in:
     00 08 10 00 2F 3A
@@ -114,38 +127,65 @@ class CCSDRV:
         return True
 
 
-    def get_device_status(self):
+    def get_device_status(self, debug=False):
         """Gets device status and parses the status bytes
 
         Returns:
             array: A list of set status bits in a readable form.
         """
-        readTo = array('h', [0])    # signed short of 16 bits to get status.
-        self.io.control_in(const.CCS_SERIES_RCMD_GET_STATUS, readTo)
-        readTo = readTo[0]
-        statuses = []
 
-        if readTo & const.CCS_SERIES_STATUS_SCAN_IDLE:
+        status = np.int32(0xFFFF)
+        readTo = usb.util.create_buffer(2)    # 16 bits to get status.
+        self.io.control_in(const.CCS_SERIES_RCMD_GET_STATUS, readTo)
+        status = np.frombuffer(readTo, dtype=np.int16)[0]
+        if debug: print(f"status(binary): {format(status, '016b')}")
+
+
+        statuses = []
+        if debug: print(f"comparing: {format(status, '016b')} and {format(const.CCS_SERIES_STATUS_SCAN_IDLE, '016b')}")
+        if status & const.CCS_SERIES_STATUS_SCAN_IDLE: 
             statuses.append("SCAN_IDLE")
-        if readTo & const.CCS_SERIES_STATUS_SCAN_TRIGGERED:
+
+        if debug: print(f"comparing: {format(status, '016b')} and {format(const.CCS_SERIES_STATUS_SCAN_TRIGGERED, '016b')}")
+        if status & const.CCS_SERIES_STATUS_SCAN_TRIGGERED:
             statuses.append("SCAN_TRIGGERED")
-        if readTo & const.CCS_SERIES_STATUS_SCAN_TRANSFER:
-            statuses.append("SCAN_TRANSFER")
-        if readTo & const.CCS_SERIES_STATUS_WAIT_FOR_EXT_TRIG:
-            statuses.append("WAIT_FOR_EXT_TRIG")
-        if readTo & const.CCS_SERIES_STATUS_SCAN_START_TRANS:
+
+        if debug: print(f"comparing: {format(status, '016b')} and {format(const.CCS_SERIES_STATUS_SCAN_START_TRANS, '016b')}")    
+        if status & const.CCS_SERIES_STATUS_SCAN_START_TRANS:
             statuses.append("SCAN_START_TRANS")
+
+        if debug: print(f"comparing: {format(status, '016b')} and {format(const.CCS_SERIES_STATUS_SCAN_TRANSFER, '016b')}")    
+        if status & const.CCS_SERIES_STATUS_SCAN_TRANSFER:
+            statuses.append("SCAN_TRANSFER")
+        
+        if debug: print(f"comparing: {format(status, '016b')} and {format(const.CCS_SERIES_STATUS_WAIT_FOR_EXT_TRIG, '016b')}")   
+        if status & const.CCS_SERIES_STATUS_WAIT_FOR_EXT_TRIG:
+            statuses.append("WAIT_FOR_EXT_TRIG")
         
         return statuses
+
 
     def start_scan(self):
         """Starts a single scan
         """
         self.io.control_out(const.CCS_SERIES_WCMD_MODUS, None, wValue=const.MODUS_INTERN_SINGLE_SHOT)
 
+    def get_scan_data(self):
+        """Get scan data from the device buffer
 
+        Returns:
+            np.array(np.float64): scan data
+        """
+        # Get raw data
+        raw = self._get_raw_data()
 
-    def get_raw_scan_data(self):
+        # Process raw data
+        data = self._acquire_raw_scan_data(raw)
+
+        return data
+
+    # FIXME: There seems to be a a period of zeroes at the beginning and end of the data.
+    def _get_raw_data(self):
         """Get raw scan data for a single scan from the device buffer
         The scan is sent from the device in uint16 with size CCS_SERIES_NUM_RAW_PIXELS
 
@@ -163,7 +203,7 @@ class CCSDRV:
         return readTo
 
     # FIXME: remove self and create an abstraction layer to get scan data?
-    def acquire_raw_scan_data(self, raw):
+    def _acquire_raw_scan_data(self, raw: np.ndarray):
         # Initialize array for modified data
         data = np.zeros(const.CCS_SERIES_NUM_PIXELS, dtype=np.float64)    
 
@@ -213,7 +253,8 @@ class CCSDRV:
         buffer = usb.util.create_buffer(const.CCS_SERIES_NUM_VERSION_BYTES)
         self.io.control_in(const.CCS_SERIES_RCMD_PRODUCT_INFO, buffer, wValue=const.CCS_SERIES_FIRMWARE_VERSION)
         return (buffer[0], buffer[1], buffer[2])
-    
+
+
     def get_hardware_revision(self):
         buffer = usb.util.create_buffer(const.CCS_SERIES_NUM_VERSION_BYTES)
         self.io.control_in(const.CCS_SERIES_RCMD_PRODUCT_INFO, buffer, wValue=const.CCS_SERIES_HARDWARE_VERSION)
