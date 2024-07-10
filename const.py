@@ -57,7 +57,7 @@ SCAN_PIXELS_OFFSET = 32
 MAX_ADC_VALUE = 0xFFFF
 
 # LLIO constants
-LL_DEFAULT_BULK_PIPE = 0x86    # This works and finds scan data
+LL_DEFAULT_BULK_IN_PIPE = 0x86    # This works and finds scan data
 LL_DEFAULT_TIMEOUT = 2000      # This same timeout is used by the orinal drivers
 
 # versions

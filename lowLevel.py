@@ -1,4 +1,5 @@
-import usb
+import usb.core
+import usb.util
 import const
 from array import array
 
@@ -7,33 +8,68 @@ class LLIO:
     Communication is done with pyusb. Includes control IN/OUT transfers and raw (bulk) read.
     """
     def __init__(self, vid=0x1313, pid=0x8087):
-        # Try to connect and set default values for vars.
+        self.vid = vid
+        self.pid = pid
+        self.dev = None
+        self.bulk_in_pipe = None
+        self.timeout = None
+        self._connect()
+
+
+    def _connect(self):
         try:
-            self.dev = usb.core.find(idVendor=vid, idProduct=pid)
+            self.dev = usb.core.find(idVendor=self.vid, idProduct=self.pid, find_all=False)
             if self.dev is None:
                 raise ValueError('Device not found')
-            self.dev.set_configuration()
-            self.bulk_in_pipe = const.LL_DEFAULT_BULK_PIPE    
-            self.timeout = const.LL_DEFAULT_TIMEOUT
-            self.flush()         
-
-        # Didn't connect, lose all hope
         except usb.core.USBError as e:
-            self.dev = None
-            self.bulk_in_pipe = 0x00
-            self.timeout = 0
-            raise usb.core.USBError(e)
+            raise ConnectionError(f"Failed to connect to device: {e}")
 
 
     def __del__(self):
-        if self.dev != None:
-            usb.util.dispose_resources(self.dev)
-            print("Device disconnected.")   # FIXME: LLIO shouldn't print.
+        if self.dev is not None:
+            self.close()
+        print("Device disconnected.")   # FIXME: LLIO shouldn't print.
 
-    # FIXME: does not work yet
+    
+    def open(self):
+        self.dev.set_configuration()
+        usb.util.claim_interface(self.dev, 0)      
+        self.bulk_in_pipe = const.LL_DEFAULT_BULK_IN_PIPE    
+        self.timeout = const.LL_DEFAULT_TIMEOUT
+        self.flush()
+
+
+    def close(self):
+        usb.util.release_interface(self.dev, 0)
+        usb.util.dispose_resources(self.dev)
+        self.dev = None
+
+
+    def get_bulk_in_status(self):
+        # Prepare the request
+        bmRequestType = usb.util.build_request_type(usb.util.ENDPOINT_IN, usb.util.CTRL_TYPE_STANDARD, usb.util.CTRL_RECIPIENT_ENDPOINT)
+        bRequest = 0
+        wValue = 0
+        wIndex = self.bulk_in_pipe
+        length = 2
+        attrValue = "DEFAULT"
+        # Perform the control transfer
+        statusdata = self.dev.ctrl_transfer(bmRequestType, bRequest, wValue, wIndex, length, timeout=self.timeout)
+        
+        # Check the returned status
+        if len(statusdata) < 2:
+            attrValue = "USB_PIPE_STATE_UNKNOWN"
+        if statusdata[0] & 1:  # Halt bit
+            attrValue = "USB_PIPE_STALLED"
+        else:
+            attrValue = "USB_PIPE_READY"
+
+        return attrValue
+
+
     def flush(self):
-        """Absolute botch of an implementation
-        FIXME
+        """Reads the bulk_in_pipe until timeout and throws out the result.
+        
         """
         try:
             full_flush_size = const.CCS_SERIES_NUM_RAW_PIXELS * 2
