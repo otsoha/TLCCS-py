@@ -13,7 +13,6 @@ class LLIO:
         self.dev = None
         self.bulk_in_pipe = None
         self.timeout = None
-        self._connect()
 
 
     def _connect(self):
@@ -21,6 +20,7 @@ class LLIO:
             self.dev = usb.core.find(idVendor=self.vid, idProduct=self.pid, find_all=False)
             if self.dev is None:
                 raise ValueError('Device not found')
+            self.dev.set_configuration()
         except usb.core.USBError as e:
             raise ConnectionError(f"Failed to connect to device: {e}")
 
@@ -32,15 +32,13 @@ class LLIO:
 
     
     def open(self):
-        self.dev.set_configuration()
-        usb.util.claim_interface(self.dev, 0)      
+        self._connect()
         self.bulk_in_pipe = const.LL_DEFAULT_BULK_IN_PIPE    
         self.timeout = const.LL_DEFAULT_TIMEOUT
         self.flush()
 
 
     def close(self):
-        usb.util.release_interface(self.dev, 0)
         usb.util.dispose_resources(self.dev)
         self.dev = None
 

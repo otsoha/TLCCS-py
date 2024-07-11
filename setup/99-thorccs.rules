@@ -1,0 +1,9 @@
+# /etc/udev/rules.d/99-thorccs.rules
+
+# Thor CCS spectrometers firmware upload
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1313", ATTR{idProduct}=="8086", RUN+="/bin/sh -c '/usr/sbin/fxload -t fx2lp -I /path/to/.ihx/file/ -D /dev/bus/usb/$env{BUSNUM}/$env{DEVNUM}'"
+
+# All users access for re-enumerated idProduct 8087
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1313", ATTR{idProduct}=="8087", MODE="0666"
+
+

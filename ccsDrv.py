@@ -1,5 +1,4 @@
 from lowLevel import LLIO
-from array import array
 import const
 import usb
 import numpy as np
@@ -7,10 +6,6 @@ import struct
 import time
 
 class CCSDRV:
-
-    def __init__(self):
-        self.io = None
-        self.dev = None
 
     def open(self, vid=0x1313, pid=0x8087):
         """Opens a connection through LLIO.
@@ -27,6 +22,8 @@ class CCSDRV:
         # Set default integration time
         assert self.set_integration_time(const.CCS_SERIES_DEF_INT_TIME)
         state = self.get_device_status()
+        self.integration_time = const.CCS_SERIES_DEF_INT_TIME
+        
         if "SCAN_IDLE" not in state:
             # FIXME: This is a workaround for the device not being in idle state 
             # after opening connection for first time. Look into reset.
@@ -34,7 +31,8 @@ class CCSDRV:
             time.sleep(3) 
             self.start_scan()
             self.get_scan_data()   
-
+        
+        
     def close(self):
         """Closes the connection through LLIO.
         """
@@ -68,11 +66,7 @@ class CCSDRV:
 
     def pipe_status(self):
         return self.io.get_bulk_in_status()
-    """
-    Checked with the original code, and intg_time of 1 s should result in:
-    00 08 10 00 2F 3A
-    Checked against this, it seems to work. for some reason the default does not seem to be the actual default.
-    """
+
     # FIXME: Add better error checking.
     def set_integration_time(self, intg_time: np.float64)-> bool:
         """Sets the integration time. 
@@ -124,6 +118,7 @@ class CCSDRV:
 
         # Transfer to device
         self.io.control_out(const.CCS_SERIES_WCMD_INTEGRATION_TIME, data)
+        self.integration_time = intg_time
         return True
 
 
@@ -169,6 +164,18 @@ class CCSDRV:
         """Starts a single scan
         """
         self.io.control_out(const.CCS_SERIES_WCMD_MODUS, None, wValue=const.MODUS_INTERN_SINGLE_SHOT)
+        time.sleep(self.integration_time * 1.2) # Wait for scan to complete
+
+    def start_scan_continuous(self):
+        """Starts continuous scanning. Any function except get_scan_data() and get_device_status() will stop the scan.
+        """
+        self.io.control_out(const.CCS_SERIES_WCMD_MODUS, None, wValue=const.MODUS_INTERN_CONTINUOUS)
+
+    def start_scan_ext_trigger(self):
+        """Starts a single scan with external trigger
+        """
+        self.io.control_out(const.CCS_SERIES_WCMD_MODUS, None, wValue=const.MODUS_EXTERN_SINGLE_SHOT)
+
 
     def get_scan_data(self):
         """Get scan data from the device buffer
@@ -218,7 +225,7 @@ class CCSDRV:
 
         # Process raw data
         for i in range(const.CCS_SERIES_NUM_PIXELS):
-            data[i] = (raw[const.SCAN_PIXELS_OFFSET + i] - dark_com) * norm_com
+            data[i] = (raw[const.SCAN_PIXELS_OFFSET + i] - dark_com) #* norm_com
 
         return data
 
