@@ -35,7 +35,6 @@ class LLIO:
         self._connect()
         self.bulk_in_pipe = const.LL_DEFAULT_BULK_IN_PIPE    
         self.timeout = const.LL_DEFAULT_TIMEOUT
-        self.flush()
 
 
     def close(self):

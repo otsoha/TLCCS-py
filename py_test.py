@@ -51,7 +51,7 @@ def plot(data: np.ndarray, name: str = 'ressA.png'):
     plt.grid(True)
 
     # Set the y-axis limits to start at 0
-    plt.ylim(bottom=0, top=2000)
+    # plt.ylim(bottom=0)
 
     # Save the plot as a PNG file
     plt.savefig(name)
@@ -103,24 +103,54 @@ def scan_test():
 def three_scan_test():
     ccs = CCSDRV()
     ccs.open()
-    ccs.set_integration_time(1)
+    ccs.set_integration_time(0.5)
     print(f"Integration time: {ccs.get_integration_time()}")
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.start_scan()
     print(f"Dev status: {ccs.get_device_status()}")
-    data = ccs._get_raw_data()
-    plotRaw(data, 'testA.png')
+    data = ccs.get_scan_data()
+    plot(data, 'testA.png')
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.start_scan()
     print(f"Dev status: {ccs.get_device_status()}")
-    data = ccs._get_raw_data()
-    plotRaw(data, 'testB.png')
+    data = ccs.get_scan_data()
+    plot(data, 'testB.png')
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.start_scan()
     print(f"Dev status: {ccs.get_device_status()}")
-    data = ccs._get_raw_data()
-    plotRaw(data, 'testC.png')
+    data = ccs.get_scan_data()
+    plot(data, 'testC.png')
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.close()
 
-three_scan_test()
+def timed_test():
+    
+    ccs = CCSDRV()
+    ccs.open()
+    ccs.set_integration_time(0.5)
+    print(f"Integration time: {ccs.get_integration_time()}")
+    print(f"Dev status: {ccs.get_device_status()}")
+    
+    input("press enter to scan")
+    ccs.start_scan()
+    print(f"Dev status: {ccs.get_device_status()}")
+    data = ccs.get_scan_data()
+    plot(data, 'testA.png')
+    print(f"Dev status: {ccs.get_device_status()}")
+
+    input("press enter to scan")
+    ccs.start_scan()
+    print(f"Dev status: {ccs.get_device_status()}")
+    data = ccs.get_scan_data()
+    plot(data, 'testB.png')
+    print(f"Dev status: {ccs.get_device_status()}")
+
+    input("press enter to scan")
+    ccs.start_scan()
+    print(f"Dev status: {ccs.get_device_status()}")
+    data = ccs.get_scan_data()
+    plot(data, 'testC.png')
+    print(f"Dev status: {ccs.get_device_status()}")
+    ccs.close()
+
+timed_test()

@@ -164,7 +164,7 @@ class CCSDRV:
         """Starts a single scan
         """
         self.io.control_out(const.CCS_SERIES_WCMD_MODUS, None, wValue=const.MODUS_INTERN_SINGLE_SHOT)
-        time.sleep(self.integration_time * 1.2) # Wait for scan to complete
+        time.sleep(self.integration_time) # Wait for scan to complete
 
     def start_scan_continuous(self):
         """Starts continuous scanning. Any function except get_scan_data() and get_device_status() will stop the scan.
@@ -213,7 +213,7 @@ class CCSDRV:
     def _acquire_raw_scan_data(self, raw: np.ndarray):
         # Initialize array for modified data
         data = np.zeros(const.CCS_SERIES_NUM_PIXELS, dtype=np.float64)    
-
+        
         # Sum the dark pixels
         dark_com = np.sum(raw[const.DARK_PIXELS_OFFSET:const.DARK_PIXELS_OFFSET + const.NO_DARK_PIXELS])
 
@@ -222,14 +222,14 @@ class CCSDRV:
 
         # Calculate normalizing factor
         norm_com = 1.0 / (const.MAX_ADC_VALUE - dark_com)
-
+        
         # Process raw data
         for i in range(const.CCS_SERIES_NUM_PIXELS):
-            data[i] = (raw[const.SCAN_PIXELS_OFFSET + i] - dark_com) #* norm_com
+            data[i] = (raw[const.SCAN_PIXELS_OFFSET + i]- dark_com) * norm_com
 
         return data
 
-
+    # FIXME: untested
     def read_eeprom(self, addr, idx, length):
 
         # Buffers
