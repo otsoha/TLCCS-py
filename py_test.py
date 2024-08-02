@@ -1,11 +1,15 @@
-from ccsDrv import CCSDRV
-from array import array
-import const
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from ccsDrv import CCSDRV
+import const
 import time
 
-def plotRaw(data: np.ndarray, name: str = 'spectrometer_results_raw.png'):
+"""Tests for the CCS Spectrometer Driver.
+"""
+
+
+def plotRaw(data: np.ndarray, name: str = "spectrometer_results_raw.png"):
     # Ensure the number of points matches your data length
     num_points = const.CCS_SERIES_NUM_RAW_PIXELS
     if len(data) != num_points:
@@ -17,21 +21,22 @@ def plotRaw(data: np.ndarray, name: str = 'spectrometer_results_raw.png'):
 
     # Plot the spectrometer data
     plt.figure(figsize=(10, 6))
-    plt.plot(wavelengths, intensities, label='Spectrometer Data', color='blue')
-    plt.xlabel('Wavelength (nm)')
-    plt.ylabel('Intensity')
-    plt.title('Spectrometer Results')
+    plt.plot(wavelengths, intensities, label="Spectrometer Data", color="blue")
+    plt.xlabel("Wavelength (nm)")
+    plt.ylabel("Intensity")
+    plt.title("Spectrometer Results")
     plt.legend()
     plt.grid(True)
-    
+
     # Set the y-axis limits to start at 0
     plt.ylim(bottom=0)
- 
+
     # Save the plot as a PNG file
     plt.savefig(name)
     print(f"Plot saved as '{name}'")
 
-def plot(data: np.ndarray, name: str = 'ressA.png'):
+
+def plot(data: np.ndarray, name: str = "ressA.png"):
     # Ensure the number of points matches your data length
     num_points = const.CCS_SERIES_NUM_PIXELS
     if len(data) != num_points:
@@ -43,10 +48,10 @@ def plot(data: np.ndarray, name: str = 'ressA.png'):
 
     # Plot the spectrometer data
     plt.figure(figsize=(10, 6))
-    plt.plot(wavelengths, intensities, label='Spectrometer Data', color='blue')
-    plt.xlabel('Wavelength (nm)')
-    plt.ylabel('Intensity')
-    plt.title('Spectrometer Results')
+    plt.plot(wavelengths, intensities, label="Spectrometer Data", color="blue")
+    plt.xlabel("Wavelength (nm)")
+    plt.ylabel("Intensity")
+    plt.title("Spectrometer Results")
     plt.legend()
     plt.grid(True)
 
@@ -57,12 +62,11 @@ def plot(data: np.ndarray, name: str = 'ressA.png'):
     plt.savefig(name)
     print(f"Plot saved as '{name}'")
 
+
 def head(data):
     print("First 10 bytes of raw scan data:")
     for i in range(min(10, len(data))):
         print(f"Byte {i}: {data[i]:02f}")
-    
-
 
 
 def open_test():
@@ -78,7 +82,7 @@ def open_test():
     ccs.get_firmware_revision()
     time.sleep(5)
     print(f"Dev status: {ccs.get_device_status()}")
-    
+
     ccs.get_hardware_revision()
     time.sleep(5)
     print(f"Dev status: {ccs.get_device_status()}")
@@ -89,6 +93,7 @@ def open_test():
 
     ccs.close()
 
+
 def scan_test():
     ccs = CCSDRV()
     ccs.open()
@@ -96,9 +101,10 @@ def scan_test():
     ccs.start_scan()
     print(f"Dev status: {ccs.get_device_status()}")
     data = ccs.get_scan_data()
-    plot(data, 'testA.png')
+    plot(data, "testA.png")
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.close()
+
 
 def three_scan_test():
     ccs = CCSDRV()
@@ -109,18 +115,19 @@ def three_scan_test():
     ccs.start_scan()
     print(f"Dev status: {ccs.get_device_status()}")
     data = ccs._get_raw_data()
-    plotRaw(data, 'testA.png')
+    plotRaw(data, "testA.png")
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.start_scan()
     print(f"Dev status: {ccs.get_device_status()}")
     data = ccs._get_raw_data()
-    plotRaw(data, 'testB.png')
+    plotRaw(data, "testB.png")
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.start_scan()
     print(f"Dev status: {ccs.get_device_status()}")
     data = ccs._get_raw_data()
-    plotRaw(data, 'testC.png')
+    plotRaw(data, "testC.png")
     print(f"Dev status: {ccs.get_device_status()}")
     ccs.close()
+
 
 three_scan_test()

@@ -1,18 +1,18 @@
 # Integration times
-CCS_SERIES_MAX_INT_TIME = 60.0     # 60s is the maximum integration time
+CCS_SERIES_MAX_INT_TIME = 60.0  # 60s is the maximum integration time
 CCS_SERIES_MIN_INT_TIME = 0.00001  # 10us is the minimum integration time
-CCS_SERIES_DEF_INT_TIME = 0.01     # 10ms is the default integration time
+CCS_SERIES_DEF_INT_TIME = 0.01  # 10ms is the default integration time
 
 # Calibration data sets
 CCS_SERIES_CAL_DATA_SET_FACTORY = 0
 CCS_SERIES_CAL_DATA_SET_USER = 1
 
 # Status flags
-CCS_SERIES_STATUS_SCAN_IDLE = 0x0002            # waiting for new scan
-CCS_SERIES_STATUS_SCAN_TRIGGERED = 0x0004       # scan in progress
-CCS_SERIES_STATUS_SCAN_START_TRANS = 0x0008     # scan starting
-CCS_SERIES_STATUS_SCAN_TRANSFER = 0x0010        # scan done, waiting for data transfer
-CCS_SERIES_STATUS_WAIT_FOR_EXT_TRIG = 0x0080    # same as idle, but ext trigger is armed.
+CCS_SERIES_STATUS_SCAN_IDLE = 0x0002  # waiting for new scan
+CCS_SERIES_STATUS_SCAN_TRIGGERED = 0x0004  # scan in progress
+CCS_SERIES_STATUS_SCAN_START_TRANS = 0x0008  # scan starting
+CCS_SERIES_STATUS_SCAN_TRANSFER = 0x0010  # scan done, waiting for data transfer
+CCS_SERIES_STATUS_WAIT_FOR_EXT_TRIG = 0x0080  # same as idle, but ext trigger is armed.
 
 # Amplification correction factors
 CCS_SERIES_AMP_CORR_FACT_MIN = 0.001
@@ -50,15 +50,15 @@ CCS_SERIES_NUM_VERSION_BYTES = 3
 # Specifics
 CCS_SERIES_NUM_RAW_PIXELS = 3694
 ENDPOINT_0_TRANSFERSIZE = 64
-CCS_SERIES_NUM_PIXELS = 3648 
+CCS_SERIES_NUM_PIXELS = 3648
 NO_DARK_PIXELS = 12
 DARK_PIXELS_OFFSET = 16
 SCAN_PIXELS_OFFSET = 32
 MAX_ADC_VALUE = 0xFFFF
 
 # LLIO constants
-LL_DEFAULT_BULK_IN_PIPE = 0x86    # This works and finds scan data
-LL_DEFAULT_TIMEOUT = 2000      # This same timeout is used by the orinal drivers
+LL_DEFAULT_BULK_IN_PIPE = 0x86  # This works and finds scan data
+LL_DEFAULT_TIMEOUT = 2000  # This same timeout is used by the orinal drivers
 
 # versions
 CCS_SERIES_FIRMWARE_VERSION = 0
