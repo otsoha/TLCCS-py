@@ -1,6 +1,7 @@
 ## SETUP
 NOTE: the device should first be connected properly to a windows device, with the thorlabs driver software. This makes sure that the correct values are loaded in the EEPROM upon first connection.
 
+
 # Getting the necessary files
 The spectrometer needs a specific file load to initialize. The necessary files are installed with the thorspectra software.
 (For me the files were in thorSpectra/CCS/inf/Loader). The file name is CCSxxx.spt (e.g. CCS175.spt).
