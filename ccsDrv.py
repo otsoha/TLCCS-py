@@ -17,8 +17,8 @@ class CCSDRV:
         """
         # Set class vars
         self.io = LLIO(vid, pid)
-        self.dev = self.io.dev
         self.io.open()
+        self.dev = self.io.dev
 
         # Set default integration time
         assert self.set_integration_time(const.CCS_SERIES_DEF_INT_TIME)
