@@ -6,8 +6,11 @@ NOTE: the device should first be connected properly to a windows device, with th
 The spectrometer needs a specific file load to initialize. The necessary files are installed with the thorspectra software.
 (For me the files were in thorSpectra/CCS/inf/Loader). The file name is CCSxxx.spt (e.g. CCS175.spt).
 The files need to be converted to .ihx for fxload to be able to automatically load them on the device. 
-this python2 script works for that: https://ftp.dlitz.net/pub/dlitz/cyusb-fw-extract/0.1/
+This python2 script works for that: https://ftp.dlitz.net/pub/dlitz/cyusb-fw-extract/0.1/
 It creates two .ihx files, the second of which is the one we'll be loading on the device.
+
+see: https://aur.archlinux.org/packages/thorspec
+for more information, since this was where I found the process.
 
 # udev/rules.d setup
 - fill in the path to the corresponding .ihx file
